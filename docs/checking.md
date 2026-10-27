@@ -109,6 +109,24 @@ terms overflow the usual 8 MiB stack. [tests/check.sh](../tests/check.sh)
 does the same with `ulimit -s unlimited`. This changes where the kernel runs,
 not what it checks.
 
+`oft check` needs a stack hard limit of at least 1 GiB for the `statements`
+and `proofs` parts. Below that it stops before it compiles anything:
+
+    FAIL the stack's hard limit is 10485760 bytes; Rocq needs at least 1073741824 (docker run --ulimit stack=-1:-1)
+
+The hard limit is unlimited unless the host lowers it. `oft check` raises
+the soft limit, usually 8 MiB, to the hard limit itself.
+
+Without `--ulimit`, a container gets its stack limit from the Docker services
+that start it. On a host with systemd, these services usually get it from
+systemd's `DefaultLimitSTACK`. `docker run --ulimit stack=-1:-1` gives the
+container an unlimited stack limit, whatever the host sets. The commands in
+[proving.md](proving.md#checking-a-proof-locally) and
+[adding-a-proof.md](adding-a-proof.md#steps) pass it.
+
+Outside a container, `ulimit -Hs` shows the hard limit in KiB (1 GiB is
+1048576). Only root can raise it.
+
 ## What CI runs
 
 | workflow | when | what |
