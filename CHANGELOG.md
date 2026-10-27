@@ -8,11 +8,29 @@ The 202 proved statements cover 61 fuzz targets in 26 projects. This release add
 
 Five statements of libarchive_xar_fuzzer that let a memory request fail are now false (witnessed); analyses/known-issues.md gives the run that shows each. A statement may now allow exit 78 where a fuzz target lists its rejects; no fuzz target lists any yet. Statement fingerprints are now version 2: each hashes the code of `Shapes.v` and `Images.v`, not their comments or layout. So every fingerprint changes, and `oft revisions` with `--write-pins` wrote each of the 138 published pins again in version 2. No statement published in 2026.10.0 changes its meaning.
 
+A known limit of the agreement statements. 129 of this release's 202 proved statements are agreement statements with the reading `alloc-forced-only`, and 2026.10.0 published the same 129. Each compares a fuzz target's plain and sanitizer builds and says: on every input where the plain build stays within its memory budget, neither build crashes and both write the same output. This is exact except when our Linux model lays out memory in a way real Linux would not, and refuses a large request Linux would grant. A program that reacts to that refusal can push an input out of the statement, or hide an output difference. Test programs show this; we have not shown it in a released fuzz target. Every proof still passes its check. We plan to close the gap in the next release.
+
 Rares Buhai contributed the proof of `zlib/checksum_fuzzer/plain_halts` on the public repository ([theorem-labs/oss-verify-proofs#3](https://github.com/theorem-labs/oss-verify-proofs/pull/3)), the first proof from outside Theorem Labs. Its library reuses files of the cgif and Varnish proofs, which stay under Apache-2.0 OR MIT; each file he changed says so in a line under its licence header, and the build record says where each part came from.
 
 The release machinery is new: CI reads draft releases, a release can be uploaded in parts, `oft release-tree` cuts a release to the proofs an approvals file lists, and `oft approvals` writes that file. The adding-a-proof skill is new, and docs/licensing.md and NOTICE are revised.
 
 This release attaches no binaries and no source trees of its own. Every binary and source tree it pins stays attached to v2026.10.0, v2026.10.0-src or sources-v1. It publishes proofs and documents only, with no v2026.10.1-src release beside it.
+
+### Known issue: the model's stack window is larger than Linux gives
+
+The process model maps 8 MiB of stack below the entry stack pointer. It puts the entry image (the arguments, the environment and the auxiliary vector) above that stack pointer. Linux counts the entry image inside its 8 MiB stack limit. Thus, on a real launch, the model can give a program more stack than Linux gives.
+
+The proofs of these statements depend on a model fact about stack near that limit:
+
+- msgpack-c/unpack_pack_fuzzer/asan_halts and msgpack-c/unpack_pack_fuzzer/asan_ubsan_halts. This release proves them for the first time.
+- msgpack-c/unpack_pack_fuzzer/asan_agrees, msgpack-c/unpack_pack_fuzzer/ubsan_agrees and msgpack-c/unpack_pack_fuzzer/asan_ubsan_agrees.
+- glaze/binary_reflection/asan_agrees, glaze/binary_reflection/ubsan_agrees and glaze/binary_reflection/asan_ubsan_agrees.
+
+The msgpack-c proofs depend on files that treat stack down to 8,384,512 bytes below the entry stack pointer as available. The glaze proofs depend on files that treat stack down to 8,388,560 bytes below the entry stack pointer as available. We made five launches of a test program on real Linux, with an empty environment, the program name and one argument. In those launches, the available stack was between 8,382,288 and 8,387,440 bytes below the entry stack pointer. A launch with a larger environment or larger arguments has less stack.
+
+We know no input that makes either program use that much stack. We ran both programs with a 128 KiB stack under the emulator that our checks use. They ran correctly on every input that we tried. For msgpack-c, these inputs included data nested 1,000 levels deep. But the proofs do not show that the programs stay inside the real limit.
+
+The model correction and new proofs of these statements will come in a later release. Thank you to the reporter of rocq-linux-process-semantics#6, who found the difference.
 
 ## 2026.10.0 (2026-10-22)
 
